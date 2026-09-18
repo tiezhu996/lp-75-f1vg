@@ -14,10 +14,24 @@ export interface IResponseData {
   duration: number;
 }
 
+export interface IEnvVariableSnapshot {
+  key: string;
+  value: string;
+}
+
 export interface IRequestHistory extends Document {
   userId: mongoose.Types.ObjectId;
   method: string;
+  /** 实际发送（变量解析后）的 URL 地址 */
   url: string;
+  /** 发送前包含 {{变量名}} 的原始 URL 模板 */
+  urlTemplate?: string;
+  /** 发送时使用的环境 ID */
+  environmentId?: mongoose.Types.ObjectId;
+  /** 发送时使用的环境名称 */
+  environmentName?: string;
+  /** 发送时的环境变量值快照 */
+  envVariables?: IEnvVariableSnapshot[];
   headers: IHistoryHeader[];
   body?: string;
   response?: IResponseData;
@@ -40,6 +54,24 @@ const RequestHistorySchema: Schema = new Schema(
       type: String,
       required: true,
     },
+    urlTemplate: {
+      type: String,
+    },
+    environmentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Environment',
+    },
+    environmentName: {
+      type: String,
+      trim: true,
+    },
+    envVariables: [
+      {
+        _id: false,
+        key: { type: String, trim: true },
+        value: { type: String },
+      },
+    ],
     headers: [
       {
         key: { type: String, trim: true },

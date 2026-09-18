@@ -26,6 +26,8 @@ router.get('/', authMiddleware, async (req: AuthenticatedRequest, res: Response<
       query['$or'] = [
         { method: { $regex: searchTerm, $options: 'i' } },
         { url: { $regex: searchTerm, $options: 'i' } },
+        { urlTemplate: { $regex: searchTerm, $options: 'i' } },
+        { environmentName: { $regex: searchTerm, $options: 'i' } },
       ];
     }
 

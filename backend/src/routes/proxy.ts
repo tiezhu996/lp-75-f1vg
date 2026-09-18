@@ -1,11 +1,28 @@
 import { Router, Response } from 'express';
+import mongoose from 'mongoose';
 import authMiddleware from '../middleware/auth';
 import RequestHistory from '../models/RequestHistory';
-import { AuthenticatedRequest, ApiResponse, ProxyRequestData } from '../types';
+import { AuthenticatedRequest, ApiResponse, ProxyRequestData, EnvVariableSnapshot } from '../types';
 import { proxyRequest } from '../utils/proxy';
 import { MAX_HISTORY_PER_USER } from './history';
 
 const router = Router();
+
+/** 规整前端上报的环境变量快照，仅保留合法的 key/value 字符串 */
+const sanitizeEnvVariables = (variables: unknown): EnvVariableSnapshot[] => {
+  if (!Array.isArray(variables)) {
+    return [];
+  }
+  return variables
+    .filter(
+      (item): item is EnvVariableSnapshot =>
+        typeof item === 'object' &&
+        item !== null &&
+        typeof (item as EnvVariableSnapshot).key === 'string' &&
+        typeof (item as EnvVariableSnapshot).value === 'string'
+    )
+    .map((item) => ({ key: item.key.trim(), value: item.value }));
+};
 
 router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response<ApiResponse>) => {
   try {
@@ -14,7 +31,16 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       return;
     }
 
-    const { method, url, headers, body } = req.body as ProxyRequestData;
+    const {
+      method,
+      url,
+      headers,
+      body,
+      urlTemplate,
+      environmentId,
+      environmentName,
+      envVariables,
+    } = req.body as ProxyRequestData;
 
     if (!method || !url) {
       res.status(400).json({
@@ -26,10 +52,22 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
 
     const response = await proxyRequest({ method, url, headers, body });
 
+    const variableSnapshot = sanitizeEnvVariables(envVariables);
+    // 仅当携带了有效的环境信息时才保存环境快照（环境允许没有变量）
+    const hasValidEnvironmentId =
+      typeof environmentId === 'string' && mongoose.Types.ObjectId.isValid(environmentId);
+    const hasValidEnvironmentName =
+      typeof environmentName === 'string' && environmentName.trim().length > 0;
+    const hasEnvironmentSnapshot = hasValidEnvironmentId && hasValidEnvironmentName;
+
     const history = new RequestHistory({
       userId: req.user._id,
       method,
       url,
+      urlTemplate: typeof urlTemplate === 'string' && urlTemplate.trim() ? urlTemplate : undefined,
+      environmentId: hasEnvironmentSnapshot ? environmentId : undefined,
+      environmentName: hasEnvironmentSnapshot ? environmentName.trim() : undefined,
+      envVariables: hasEnvironmentSnapshot ? variableSnapshot : undefined,
       headers,
       body,
       response,

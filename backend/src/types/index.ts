@@ -25,11 +25,24 @@ export interface HeaderItem {
   enabled: boolean;
 }
 
+export interface EnvVariableSnapshot {
+  key: string;
+  value: string;
+}
+
 export interface ProxyRequestData {
   method: HttpMethod;
   url: string;
   headers: HeaderItem[];
   body?: string;
+  /** 发送前包含 {{变量名}} 的原始 URL 模板 */
+  urlTemplate?: string;
+  /** 实际发送时使用的环境 ID */
+  environmentId?: string;
+  /** 实际发送时使用的环境名称 */
+  environmentName?: string;
+  /** 实际发送时的环境变量值快照 */
+  envVariables?: EnvVariableSnapshot[];
 }
 
 export interface ProxyResponse {

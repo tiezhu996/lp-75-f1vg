@@ -75,7 +75,16 @@ export interface RequestHistory {
   _id: string;
   userId: string;
   method: HttpMethod;
+  /** 实际发送（变量解析后）的 URL 地址 */
   url: string;
+  /** 发送前包含 {{变量名}} 的原始 URL 模板 */
+  urlTemplate?: string;
+  /** 发送时使用的环境 ID */
+  environmentId?: string;
+  /** 发送时使用的环境名称 */
+  environmentName?: string;
+  /** 发送时的环境变量值快照 */
+  envVariables?: EnvVariable[];
   headers: Header[];
   body?: string;
   response?: {
@@ -90,7 +99,13 @@ export interface RequestHistory {
 
 export interface RequestConfig {
   method: HttpMethod;
+  /** 实际发送（变量解析后）的 URL 地址 */
   url: string;
+  /** 发送前包含 {{变量名}} 的原始 URL 模板 */
+  urlTemplate?: string;
+  environmentId?: string;
+  environmentName?: string;
+  envVariables?: EnvVariable[];
   headers: Header[];
   body?: string;
 }

@@ -165,13 +165,19 @@ const RequestPanel = ({
 
     try {
       setSending(true);
-      const resolvedUrl = replaceEnvVariables(url, activeEnvironment);
+      const urlTemplate = url.trim();
+      const resolvedUrl = replaceEnvVariables(urlTemplate, activeEnvironment);
 
       const result = await sendRequest({
         method,
         url: resolvedUrl,
         headers,
         body,
+        urlTemplate,
+        // 保存发送时的环境名与变量值快照，环境后续变化时历史保留旧解析结果
+        environmentId: activeEnvironment?._id,
+        environmentName: activeEnvironment?.name,
+        envVariables: activeEnvironment ? activeEnvironment.variables : undefined,
       });
 
       setResponse(result);
