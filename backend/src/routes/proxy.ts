@@ -1,11 +1,44 @@
 import { Router, Response } from 'express';
+import mongoose from 'mongoose';
 import authMiddleware from '../middleware/auth';
 import RequestHistory from '../models/RequestHistory';
-import { AuthenticatedRequest, ApiResponse, ProxyRequestData } from '../types';
+import { AuthenticatedRequest, ApiResponse, ProxyRequestData, EnvSnapshotPayload } from '../types';
 import { proxyRequest } from '../utils/proxy';
 import { MAX_HISTORY_PER_USER } from './history';
 
 const router = Router();
+
+// 规范化前端传来的环境快照，过滤非法字段，避免脏数据入库
+const sanitizeEnvSnapshot = (raw: unknown): EnvSnapshotPayload | null => {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const candidate = raw as Partial<EnvSnapshotPayload>;
+  const environmentId =
+    typeof candidate.environmentId === 'string'
+      ? candidate.environmentId
+      : '';
+  const name = typeof candidate.name === 'string' ? candidate.name : '';
+
+  if (!mongoose.Types.ObjectId.isValid(environmentId) || !name.trim()) {
+    return null;
+  }
+
+  const variables = Array.isArray(candidate.variables)
+    ? candidate.variables
+        .filter(
+          (item): item is { key: string; value: string } =>
+            !!item &&
+            typeof item.key === 'string' &&
+            item.key.trim().length > 0 &&
+            typeof item.value === 'string'
+        )
+        .map((item) => ({ key: item.key.trim(), value: item.value }))
+    : [];
+
+  return { environmentId, name: name.trim(), variables };
+};
 
 router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response<ApiResponse>) => {
   try {
@@ -14,7 +47,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       return;
     }
 
-    const { method, url, headers, body } = req.body as ProxyRequestData;
+    const { method, url, headers, body, urlTemplate, envSnapshot } = req.body as ProxyRequestData;
 
     if (!method || !url) {
       res.status(400).json({
@@ -26,10 +59,22 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
 
     const response = await proxyRequest({ method, url, headers, body });
 
+    // 原始模板缺省回退为实际解析地址，保证恢复与搜索逻辑统一
+    const safeUrlTemplate = typeof urlTemplate === 'string' && urlTemplate.trim() ? urlTemplate : url;
+    const safeEnvSnapshot = sanitizeEnvSnapshot(envSnapshot);
+
     const history = new RequestHistory({
       userId: req.user._id,
       method,
       url,
+      urlTemplate: safeUrlTemplate,
+      envSnapshot: safeEnvSnapshot
+        ? {
+            environmentId: new mongoose.Types.ObjectId(safeEnvSnapshot.environmentId),
+            name: safeEnvSnapshot.name,
+            variables: safeEnvSnapshot.variables,
+          }
+        : undefined,
       headers,
       body,
       response,

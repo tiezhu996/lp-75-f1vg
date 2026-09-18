@@ -133,6 +133,7 @@ const Workspace = () => {
 
       <HistoryModal
         visible={historyModalVisible}
+        activeEnvironment={activeEnvironment}
         onClose={() => setHistoryModalVisible(false)}
         onRestore={(config) => {
           setInitialConfig(null);

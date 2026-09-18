@@ -6,6 +6,17 @@ export interface IHistoryHeader {
   enabled: boolean;
 }
 
+export interface IEnvSnapshotVariable {
+  key: string;
+  value: string;
+}
+
+export interface IEnvironmentSnapshot {
+  environmentId: mongoose.Types.ObjectId;
+  name: string;
+  variables: IEnvSnapshotVariable[];
+}
+
 export interface IResponseData {
   status: number;
   statusText: string;
@@ -18,6 +29,8 @@ export interface IRequestHistory extends Document {
   userId: mongoose.Types.ObjectId;
   method: string;
   url: string;
+  urlTemplate?: string;
+  envSnapshot?: IEnvironmentSnapshot;
   headers: IHistoryHeader[];
   body?: string;
   response?: IResponseData;
@@ -39,6 +52,22 @@ const RequestHistorySchema: Schema = new Schema(
     url: {
       type: String,
       required: true,
+    },
+    // 发送时用户输入的原始 URL 模板（可能含 {{变量}}）
+    urlTemplate: {
+      type: String,
+    },
+    // 发送时的环境快照（环境名 + 变量值快照）
+    envSnapshot: {
+      environmentId: { type: Schema.Types.ObjectId },
+      name: { type: String },
+      variables: [
+        {
+          _id: false,
+          key: { type: String, trim: true },
+          value: { type: String },
+        },
+      ],
     },
     headers: [
       {

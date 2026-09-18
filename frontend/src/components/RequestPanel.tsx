@@ -167,11 +167,25 @@ const RequestPanel = ({
       setSending(true);
       const resolvedUrl = replaceEnvVariables(url, activeEnvironment);
 
+      // 保存原始模板、环境名与变量值快照，实际解析地址单独发送
+      const envSnapshot = activeEnvironment
+        ? {
+            environmentId: activeEnvironment._id,
+            name: activeEnvironment.name,
+            variables: activeEnvironment.variables.map((variable) => ({
+              key: variable.key,
+              value: variable.value,
+            })),
+          }
+        : null;
+
       const result = await sendRequest({
         method,
         url: resolvedUrl,
         headers,
         body,
+        urlTemplate: url,
+        envSnapshot,
       });
 
       setResponse(result);

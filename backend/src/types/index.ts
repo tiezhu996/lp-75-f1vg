@@ -25,11 +25,24 @@ export interface HeaderItem {
   enabled: boolean;
 }
 
+export interface EnvSnapshotVariable {
+  key: string;
+  value: string;
+}
+
+export interface EnvSnapshotPayload {
+  environmentId: string;
+  name: string;
+  variables: EnvSnapshotVariable[];
+}
+
 export interface ProxyRequestData {
   method: HttpMethod;
   url: string;
   headers: HeaderItem[];
   body?: string;
+  urlTemplate?: string;
+  envSnapshot?: EnvSnapshotPayload | null;
 }
 
 export interface ProxyResponse {

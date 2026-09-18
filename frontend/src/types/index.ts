@@ -71,11 +71,32 @@ export interface ProxyResponse {
   historyId: string;
 }
 
+export interface EnvSnapshotVariable {
+  key: string;
+  value: string;
+}
+
+export interface EnvironmentSnapshot {
+  environmentId: string;
+  name: string;
+  variables: EnvSnapshotVariable[];
+}
+
+export interface ChangedVariable {
+  key: string;
+  snapshotValue: string | null;
+  currentValue: string | null;
+}
+
 export interface RequestHistory {
   _id: string;
   userId: string;
   method: HttpMethod;
   url: string;
+  urlTemplate?: string;
+  envSnapshot?: EnvironmentSnapshot;
+  envStatus?: 'exists' | 'deleted' | null;
+  changedVariables?: ChangedVariable[];
   headers: Header[];
   body?: string;
   response?: {
@@ -93,4 +114,6 @@ export interface RequestConfig {
   url: string;
   headers: Header[];
   body?: string;
+  urlTemplate?: string;
+  envSnapshot?: EnvironmentSnapshot | null;
 }
